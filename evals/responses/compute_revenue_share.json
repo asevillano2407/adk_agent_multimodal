@@ -1,0 +1,16 @@
+{
+  "status": "answered",
+  "answer": "De acuerdo con la tabla de 'Fiscal 2025 Reportable Segments', los ingresos del segmento 'Compute & Networking' ascendieron a $116.2 billion USD, mientras que los ingresos consolidados totales alcanzaron los $130.5 billion USD. Cálculo: ($116.2 billion USD / $130.5 billion USD) * 100 = 89.04214559386973% (aproximadamente 89.04%). Limitación de precisión: Las cifras reportadas están redondeadas a un decimal (en miles de millones de USD), por lo que el cálculo exacto está sujeto al margen de redondeo de las cifras de origen.",
+  "sources": [
+    "Imagen adjunta: Fiscal 2025 Reportable Segments"
+  ],
+  "limitations": [
+    "Los valores de origen ($116.2 billion y $130.5 billion) están redondeados a un decimal en miles de millones de USD, lo que limita la precisión exacta del porcentaje calculado."
+  ],
+  "revenue_share_calculation": {
+    "segment_revenue": 116.2,
+    "consolidated_revenue": 130.5,
+    "unit": "billion_USD",
+    "percentage": 89.04
+  }
+}

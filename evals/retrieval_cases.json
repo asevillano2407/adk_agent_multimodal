@@ -1,0 +1,43 @@
+[
+    {
+        "id": "segment_revenue",
+        "query": "Compute Networking revenue",
+        "relevant_pages": [
+        {
+            "source_file": "NVIDIA-2025-Annual-Report.pdf",
+            "pdf_page": 18
+        }
+        ]
+    },
+    {
+        "id": "gtc_attendance",
+        "query": "GTC conference attendees San Jose",
+        "relevant_pages": [
+        {
+            "source_file": "NVIDIA-2025-Annual-Report.pdf",
+            "pdf_page": 11
+        }
+        ]
+    },
+    {
+        "id": "customer_concentration",
+        "query": "Customers A B C represented total revenue",
+        "relevant_pages": [
+        {
+            "source_file": "NVIDIA-2025-Annual-Report.pdf",
+            "pdf_page": 115
+        }
+        ]
+    },
+    {
+        "id": "segment_revenue_es",
+        "query": "ingresos segmento informática redes",
+        "relevant_pages": [
+        {
+            "source_file": "NVIDIA-2025-Annual-Report.pdf",
+            "pdf_page": 18
+        }
+        ]
+    }
+
+]

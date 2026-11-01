@@ -1,0 +1,39 @@
+# Local Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local secrets (keep only templates without real values)
+.env
+.env.*
+!.env.example
+!.env.*.example
+.secrets/
+secrets/
+adk_env/
+credentials.json
+application_default_credentials.json
+*service-account*.json
+*service_account*.json
+*.pem
+*.key
+
+# Source documents kept locally
+/data/raw/
+/data/processed/
+
+# Local ADK session data and logs
+.adk/
+*.log
+/evals/runs/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/

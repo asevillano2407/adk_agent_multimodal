@@ -1,0 +1,64 @@
+[
+  {
+    "id": "missing_document",
+    "expected_status": "insufficient_evidence",
+    "question": "¿Cuáles fueron los ingresos de NVIDIA en el ejercicio fiscal 2025? Cita documento y página.",
+    "input_files": [],
+    "must_include": [
+      "Indicar que necesita el documento para verificar la cifra."
+    ],
+    "must_not_include": [
+      "Una cifra de ingresos presentada como verificada.",
+      "Una cita de documento o página inventada."
+    ]
+  },
+  {
+    "id": "spain_revenue_missing",
+    "expected_status": "insufficient_evidence",
+    "question": "¿Qué porcentaje de los ingresos de Compute & Networking de 2025 corresponde a clientes de España? Responde únicamente con lo que permite justificar la imagen.",
+    "input_files": [
+      "evals/fixtures/nvidia_fy2025_results.png"
+    ],
+    "must_include": [
+      "Indicar que la imagen no permite determinar el porcentaje solicitado.",
+      "Explicar que falta un desglose geográfico de ingresos para España."
+    ],
+    "must_not_include": [
+      "Un porcentaje o importe de ingresos de España sin evidencia en la imagen.",
+      "Interpretar el crecimiento interanual del 145 % como participación de España en los ingresos."
+    ]
+  },
+  {
+  "id": "compute_revenue_share",
+  "expected_status": "answered",
+  "question": "¿Qué porcentaje de los ingresos consolidados de 2025 corresponde a Compute & Networking? Muestra los valores, el cálculo y las limitaciones de precisión.",
+  "input_files": ["evals/fixtures/nvidia_fy2025_results.png"],
+  "must_include": [
+    "Estado answered.",
+    "Ingresos del segmento de 116,2 y consolidados de 130,5 mil millones de dólares.",
+    "Dividir 116,2 entre 130,5 y multiplicar por 100: aproximadamente 89,04 %.",
+    "Advertir que las cifras de origen están redondeadas."
+  ],
+  "expected_calculation": {
+    "segment_revenue": 116.2,
+    "consolidated_revenue": 130.5,
+    "unit": "billion_USD"
+  },
+  "must_not_include": [
+    "Confundir el crecimiento del 145 % con la participación en los ingresos.",
+    "Presentar el porcentaje como exacto."
+  ]
+  },
+  {
+  "id": "rag_compute_revenue_share",
+  "question": "¿Qué porcentaje de los ingresos consolidados de 2025 corresponde a Compute & Networking? Muestra los valores, el cálculo y las limitaciones de precisión. Cita el documento y la página PDF utilizados.",
+  "input_files": [],
+  "retrieval_query": "Compute Networking revenue",
+  "expected_status": "answered",
+  "expected_calculation": {
+    "segment_revenue": 116.2,
+    "consolidated_revenue": 130.5,
+    "unit": "billion_USD"
+  }
+}
+]

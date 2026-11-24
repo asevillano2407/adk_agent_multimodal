@@ -3,14 +3,31 @@
 import json
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
 
-from ingestion.export_pdf import export_pdf
+from ingestion.export_pdf import export_pdf, write_jsonl
 
 
 class TestExportPdf(unittest.TestCase):
     """Preserve page content and surface extraction failures."""
+
+    def test_short_temporary_name_supports_destination_near_windows_limit(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            filename = "prepare.fixed.c1200.o200.manifest.json"
+            parent_length = 254 - len(filename) - 1
+            padding = parent_length - len(str(root)) - 1
+            if not 1 <= padding <= 240:
+                self.skipTest("La ruta temporal del sistema no permite reproducir este límite.")
+            output = root / ("x" * padding) / filename
+            self.assertEqual(len(str(output)), 254)
+            record = {"status": "prepared"}
+            with patch("ingestion.export_pdf.NamedTemporaryFile", wraps=NamedTemporaryFile) as temporary:
+                self.assertEqual(write_jsonl([record], output), 1)
+            self.assertLessEqual(len(temporary.call_args.kwargs["prefix"]), 8)
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8")), record)
+            self.assertEqual(list(output.parent.iterdir()), [output])
 
     def test_round_trip_preserves_unicode_newlines_and_empty_page(self) -> None:
         records = [

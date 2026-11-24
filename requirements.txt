@@ -1,2 +1,8 @@
 google-adk==2.13.0
 pypdf==6.21.4
+fonttools==4.68.0
+pypdfium2==5.14.0
+Pillow==13.0.0
+chromadb==1.5.9
+# Mantener el exportador alineado con el SDK de OpenTelemetry admitido por ADK.
+opentelemetry-exporter-otlp-proto-grpc<=1.44

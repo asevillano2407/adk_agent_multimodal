@@ -5,10 +5,35 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from retrieval.search_pages import search_pages
+from retrieval.search_pages import search_pages, search_records
 
 
 class TestSearchPages(unittest.TestCase):
+    def test_in_memory_search_matches_existing_file_baseline(self) -> None:
+        records = [
+            {"source_file": "b.pdf", "pdf_page": 1, "text": "Revenue alpha"},
+            {"source_file": "a.pdf", "pdf_page": 2, "text": "Revenue"},
+        ]
+        self.write_index(records)
+        self.assertEqual(search_records("revenue", records),
+                         search_pages("revenue", self.index_path))
+        self.assertNotIn("score", records[0])
+
+    def test_document_filter_is_exact_and_applies_before_top_k(self) -> None:
+        records = [
+            {"source_file": "other.pdf", "pdf_page": 1, "text": "Revenue alpha beta"},
+            {"source_file": "annual-IR.pdf", "pdf_page": 2, "text": "Revenue"},
+        ]
+        hits = search_records("Revenue alpha beta", records, 1, source_file="annual-IR.pdf")
+        self.assertEqual([hit["source_file"] for hit in hits], ["annual-IR.pdf"])
+        self.assertEqual(search_records("Revenue", records, source_file="annual-ir.pdf"), [])
+
+    def test_memory_empty_records_and_invalid_filters(self) -> None:
+        self.assertEqual(search_records("revenue", []), [])
+        for source in ("", " ", 123):
+            with self.subTest(source=source), self.assertRaises(ValueError):
+                search_records("revenue", [], source_file=source)
+
     def setUp(self) -> None:
         self.directory = TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)

@@ -7,6 +7,14 @@ from retrieval.format_context import format_context
 
 
 class TestFormatContext(unittest.TestCase):
+    def test_versioned_document_identity_is_preserved(self) -> None:
+        page = {"source_file": "annual.pdf", "pdf_page": 1, "text": "Revenue",
+                "source_sha256": "a" * 64, "document_id": "sha256:" + "a" * 64,
+                "score": 2}
+        self.assertEqual(json.loads(format_context([page])), [
+            {key: value for key, value in page.items() if key != "score"}
+        ])
+
     def test_preserves_ranked_evidence_and_excludes_internal_fields(self) -> None:
         pages = [
             {
@@ -52,6 +60,18 @@ class TestFormatContext(unittest.TestCase):
 
     def test_empty_retrieval_produces_empty_evidence(self) -> None:
         self.assertEqual(json.loads(format_context([])), [])
+
+    def test_chunk_identity_and_offsets_are_preserved_without_score(self) -> None:
+        chunk = {
+            "source_file": "annual.pdf", "pdf_page": 18,
+            "chunk_id": "annual.pdf:p18:start1000",
+            "start_char": 1000, "end_char": 1005,
+            "text": "Sales", "score": 3,
+        }
+        evidence = json.loads(format_context([chunk]))
+        self.assertEqual(evidence, [{
+            key: value for key, value in chunk.items() if key != "score"
+        }])
 
     def test_missing_provenance_or_text_is_not_silently_dropped(self) -> None:
         complete = {"source_file": "annual.pdf", "pdf_page": 18, "text": "Revenue"}

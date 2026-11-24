@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+from google.genai import types
 
 from evals.run_case import main, record_failure
 
@@ -45,7 +46,7 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
         package.__path__ = []
         isolated_modules = {
             "corporate_reports": package,
-            "corporate_reports.agent": SimpleNamespace(root_agent=object()),
+            "corporate_reports.agent": SimpleNamespace(root_agent=MagicMock()),
             "corporate_reports.schemas": SimpleNamespace(ReportAnswer=MagicMock()),
             "evals.check_calculation": SimpleNamespace(validate_calculation=MagicMock()),
         }
@@ -82,7 +83,11 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
     async def test_generation_failure_is_recorded_and_propagated(self) -> None:
         await self.check_failure(during_generation=True)
 
-    async def check_success(self, *, use_retrieval: bool) -> None:
+    async def check_success(
+        self, *, use_retrieval: bool, chunk_index: bool = False,
+        vector_backend: bool = False,
+        tool_mode: bool = False,
+    ) -> None:
         """Use the real schema and simulated events, never a live model."""
         schema_path = (
             Path(__file__).resolve().parents[1] / "corporate_reports/schemas.py"
@@ -121,6 +126,21 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
         ]
 
         async def successful_events(**kwargs):
+            if tool_mode:
+                yield SimpleNamespace(
+                    is_final_response=lambda: False,
+                    content=types.Content(parts=[types.Part(function_call=types.FunctionCall(
+                        name="search_corporate_reports", args={"query": "private query", "source_file": "annual.pdf"},
+                    ))]),
+                )
+                yield SimpleNamespace(
+                    is_final_response=lambda: False,
+                    content=types.Content(parts=[types.Part(function_response=types.FunctionResponse(
+                        name="search_corporate_reports", response={"status": "ok", "evidence": [
+                            {"source_file": "annual.pdf", "pdf_page": 18, "text": "private document"},
+                        ]},
+                    ))]),
+                )
             yield event
 
         runner = MagicMock()
@@ -155,15 +175,30 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
                     "unit": "billion_USD",
                 },
             })
+        if chunk_index:
+            case["retrieval_index"] = "data/processed/test.chunks.jsonl"
+            retrieved[0].update({
+                "chunk_id": "annual.pdf:p18:start0",
+                "start_char": 0,
+                "end_char": len(retrieved[0]["text"]),
+            })
+        if vector_backend:
+            case["retriever"] = "vector"
+        if tool_mode:
+            case.update({"execution_mode": "agent_tools", "source_file": "annual.pdf", "input_files": []})
         package = ModuleType("corporate_reports")
         package.__path__ = []
         validate_calculation = MagicMock()
         isolated_modules = {
             "corporate_reports": package,
             "corporate_reports.agent": SimpleNamespace(
-                root_agent=SimpleNamespace(model="offline-model")
+                root_agent=SimpleNamespace(
+                    model="offline-model",
+                    model_copy=lambda **kwargs: SimpleNamespace(model="offline-model", tools=[]),
+                )
             ),
             "corporate_reports.schemas": schema_module,
+            "corporate_reports.tools": SimpleNamespace(COLLECTION_NAME="nvidia_reports_fixed_gemini001_768"),
             "evals.check_calculation": SimpleNamespace(
                 validate_calculation=validate_calculation
             ),
@@ -181,7 +216,11 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
                 patch("evals.run_case.perf_counter", side_effect=[10.0, 10.125]),
                 patch("evals.run_case.version", return_value="2.13.0"),
                 patch("evals.run_case.search_pages", return_value=retrieved) as search,
+                patch("evals.run_case.search_chunks", return_value=retrieved) as vector_search,
+                patch("evals.run_case.chromadb.PersistentClient") as store,
+                patch("evals.run_case.genai.Client") as embedding_client,
                 patch("evals.run_case.record_failure") as save_failure,
+                patch("evals.run_case.check_agent_index", return_value={"collection": "offline-index"}) as preflight,
                 redirect_stdout(StringIO()),
             ):
                 await main(case["id"])
@@ -203,10 +242,33 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(metadata["input_files"], case["input_files"])
             self.assertEqual(metadata["generation_seconds"], 0.125)
             self.assertEqual(metadata["automated_checks"], "passed")
+            if tool_mode:
+                preflight.assert_called_once()
+                self.assertEqual(metadata["execution_mode"], "agent_tools")
+                self.assertEqual(metadata["agent_index"], {"collection": "offline-index"})
+                self.assertEqual(len(metadata["tool_trace"]), 2)
+                self.assertNotIn("private query", json.dumps(metadata))
+                self.assertNotIn("private document", json.dumps(metadata))
+                self.assertEqual(runner.run_async.call_args.kwargs["run_config"].max_llm_calls, 8)
+            else:
+                preflight.assert_not_called()
             self.assertEqual(metadata["retrieval_query"], case.get("retrieval_query"))
-            self.assertEqual(metadata["retrieved_pages"], [
-                {"source_file": "annual.pdf", "pdf_page": 18}
-            ] if use_retrieval else [])
+            expected_refs = [
+                {
+                    key: value for key, value in record.items()
+                    if key not in ("text", "score")
+                }
+                for record in retrieved
+            ] if use_retrieval else []
+            self.assertEqual(metadata["retrieved_pages"], expected_refs)
+            expected_index = case.get(
+                "retrieval_index", "data/processed/nvidia_2025.pages.jsonl"
+            ) if use_retrieval else None
+            self.assertEqual(metadata["retrieval_index"], expected_index)
+            self.assertEqual(
+                metadata["retrieved_text_characters"],
+                len(retrieved[0]["text"]) if use_retrieval else 0,
+            )
             self.assertEqual(
                 response_path.stem,
                 f"{case['id']}_{metadata['timestamp_utc']}",
@@ -215,23 +277,36 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
         message = runner.run_async.call_args.kwargs["new_message"]
         self.assertEqual(message.parts[0].text, case["question"])
         if use_retrieval:
-            search.assert_called_once_with(
-                case["retrieval_query"],
-                project_root / "data/processed/nvidia_2025.pages.jsonl",
-                top_k=3,
-            )
+            if vector_backend:
+                search.assert_not_called()
+                vector_search.assert_called_once_with(
+                    embedding_client.return_value.__enter__.return_value,
+                    store.return_value.get_collection.return_value,
+                    case["retrieval_query"], top_k=3,
+                )
+                embedding_client.return_value.__exit__.assert_called_once()
+                self.assertEqual(metadata["retriever"], "vector")
+            else:
+                search.assert_called_once_with(
+                    case["retrieval_query"],
+                    project_root / expected_index,
+                    top_k=3,
+                )
             self.assertEqual(len(message.parts), 2)
             self.assertIsNone(message.parts[1].inline_data)
             context = json.loads(message.parts[1].text.split("\n", 1)[1])
             self.assertEqual(context, [{
-                "source_file": "annual.pdf",
-                "pdf_page": 18,
-                "text": retrieved[0]["text"],
+                key: value for key, value in retrieved[0].items() if key != "score"
             }])
             validate_calculation.assert_called_once()
             checked_response, checked_reference = validate_calculation.call_args.args
             self.assertEqual(checked_reference, case["expected_calculation"])
             self.assertEqual(checked_response.revenue_share_calculation.percentage, 89.04)
+        elif tool_mode:
+            self.assertEqual(len(message.parts), 1)
+            search.assert_not_called()
+            vector_search.assert_not_called()
+            validate_calculation.assert_not_called()
         else:
             search.assert_not_called()
             self.assertEqual(message.parts[1].inline_data.data, image_bytes)
@@ -243,8 +318,17 @@ class TestRunCase(unittest.IsolatedAsyncioTestCase):
     async def test_success_saves_response_and_matching_metadata(self) -> None:
         await self.check_success(use_retrieval=False)
 
+    async def test_tool_execution_starts_without_context_and_saves_sanitized_trace(self) -> None:
+        await self.check_success(use_retrieval=False, tool_mode=True)
+
     async def test_rag_sends_retrieved_context_and_records_provenance(self) -> None:
         await self.check_success(use_retrieval=True)
+
+    async def test_rag_selects_chunk_index_and_preserves_chunk_provenance(self) -> None:
+        await self.check_success(use_retrieval=True, chunk_index=True)
+
+    async def test_vector_rag_sends_evidence_and_closes_embedding_client(self) -> None:
+        await self.check_success(use_retrieval=True, chunk_index=True, vector_backend=True)
 
 
 class TestCalculation(unittest.TestCase):

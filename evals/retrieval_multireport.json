@@ -1,0 +1,58 @@
+[
+  {
+    "id": "report_2021_segment_revenue",
+    "source_file": "2021-annual-report-insert-web-ir-update.pdf",
+    "query": "Según el informe anual de 2021, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2021?",
+    "relevant_pages": [{"source_file": "2021-annual-report-insert-web-ir-update.pdf", "pdf_page": 116}, {"source_file": "2021-annual-report-insert-web-ir-update.pdf", "pdf_page": 157}],
+    "evidence": [{"source_file": "2021-annual-report-insert-web-ir-update.pdf", "pdf_page": 116, "all_of": ["2021", "Compute & Networking", "6,841", "16,675", "in millions"]}, {"source_file": "2021-annual-report-insert-web-ir-update.pdf", "pdf_page": 157, "all_of": ["2021", "Compute & Networking", "Revenue", "6,841", "16,675", "In millions"]}]
+  },
+  {
+    "id": "report_2022_segment_revenue",
+    "source_file": "2022-annual-report-insert-web-IR-update.pdf",
+    "query": "Según el informe anual de 2022, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2022?",
+    "relevant_pages": [{"source_file": "2022-annual-report-insert-web-IR-update.pdf", "pdf_page": 148}],
+    "evidence": [{"source_file": "2022-annual-report-insert-web-IR-update.pdf", "pdf_page": 148, "all_of": ["2022", "Compute & Networking", "11,046", "26,914", "in millions"]}]
+  },
+  {
+    "id": "report_2023_segment_revenue",
+    "source_file": "2023-annual-report-insert-web-IR-update.pdf",
+    "query": "Según el informe anual de 2023, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2023?",
+    "relevant_pages": [{"source_file": "2023-annual-report-insert-web-IR-update.pdf", "pdf_page": 117}, {"source_file": "2023-annual-report-insert-web-IR-update.pdf", "pdf_page": 15}],
+    "evidence": [{"source_file": "2023-annual-report-insert-web-IR-update.pdf", "pdf_page": 117, "all_of": ["2023", "Compute & Networking", "15,068", "26,974", "in millions"]}, {"source_file": "2023-annual-report-insert-web-IR-update.pdf", "pdf_page": 15, "all_of": ["2023", "Compute & Networking", "Revenue", "15.1", "27.0", "billion"]}]
+  },
+  {
+    "id": "report_2024_segment_revenue",
+    "source_file": "2024-annual-report-insert-web-IR-update.pdf",
+    "query": "Según el informe anual de 2024, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2024?",
+    "relevant_pages": [{"source_file": "2024-annual-report-insert-web-IR-update.pdf", "pdf_page": 126}, {"source_file": "2024-annual-report-insert-web-IR-update.pdf", "pdf_page": 20}],
+    "evidence": [{"source_file": "2024-annual-report-insert-web-IR-update.pdf", "pdf_page": 126, "all_of": ["2024", "Compute & Networking", "47,405", "60,922", "in millions"]}, {"source_file": "2024-annual-report-insert-web-IR-update.pdf", "pdf_page": 20, "all_of": ["2024", "Compute & Networking", "Revenue", "47.4", "60.9", "billion"]}]
+  },
+  {
+    "id": "report_2025_segment_revenue",
+    "source_file": "NVIDIA-2025-Annual-Report.pdf",
+    "query": "Según el informe anual de 2025, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2025?",
+    "relevant_pages": [{"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 133}, {"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 18}],
+    "evidence": [{"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 133, "all_of": ["2025", "Compute & Networking", "116,193", "130,497", "in millions"]}, {"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 18, "all_of": ["2025", "Compute & Networking", "Revenue", "116.2", "130.5", "billion"]}]
+  },
+  {
+    "id": "report_2026_segment_revenue",
+    "source_file": "2026-Annual-Report-Web.pdf",
+    "query": "Según el informe anual de 2026, ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2026?",
+    "relevant_pages": [{"source_file": "2026-Annual-Report-Web.pdf", "pdf_page": 165}, {"source_file": "2026-Annual-Report-Web.pdf", "pdf_page": 23}],
+    "evidence": [{"source_file": "2026-Annual-Report-Web.pdf", "pdf_page": 165, "all_of": ["2026", "Compute & Networking", "193,479", "215,938", "In millions"]}, {"source_file": "2026-Annual-Report-Web.pdf", "pdf_page": 23, "all_of": ["2026", "Compute & Networking", "Revenue", "193.5", "215.9", "billion"]}]
+  },
+  {
+    "id": "report_2025_prior_year_revenue",
+    "source_file": "NVIDIA-2025-Annual-Report.pdf",
+    "query": "Utiliza el informe anual de 2025: ¿cuáles fueron los ingresos de Compute & Networking y los ingresos totales del ejercicio fiscal 2024?",
+    "relevant_pages": [{"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 133}],
+    "evidence": [{"source_file": "NVIDIA-2025-Annual-Report.pdf", "pdf_page": 133, "all_of": ["2024", "Compute & Networking", "47,405", "60,922", "in millions"]}]
+  },
+  {
+    "id": "reports_future_actual_revenue",
+    "answerable": false,
+    "query": "¿Cuáles fueron los ingresos reales auditados de NVIDIA del ejercicio fiscal 2035?",
+    "relevant_pages": [],
+    "missing_information": "El corpus de informes 2021–2026 no aporta resultados reales auditados de FY2035; requiere revisión de abstención en generación."
+  }
+]

@@ -60,5 +60,125 @@
     "consolidated_revenue": 130.5,
     "unit": "billion_USD"
   }
+},
+{
+  "id": "rag_compute_revenue_share_chunks",
+  "question": "¿Qué porcentaje de los ingresos consolidados de 2025 corresponde a Compute & Networking? Muestra los valores, el cálculo y las limitaciones de precisión. Cita el documento y la página PDF utilizados.",
+  "input_files": [],
+  "retrieval_query": "Compute Networking revenue",
+  "retrieval_index": "data/processed/nvidia_2025.chunks.c1200.o200.jsonl",
+  "expected_status": "answered",
+  "expected_calculation": {
+    "segment_revenue": 116.2,
+    "consolidated_revenue": 130.5,
+    "unit": "billion_USD"
+  }
+},
+{
+  "id": "rag_compute_revenue_share_vector",
+  "question": "¿Qué porcentaje de los ingresos consolidados de 2025 corresponde a Compute & Networking? Muestra los valores, el cálculo y las limitaciones de precisión. Cita el documento y la página PDF utilizados. Expresa los campos estructurados de ingresos en miles de millones de USD, conservando la precisión de las cifras recuperadas.",
+  "input_files": [],
+  "retriever": "vector",
+  "retrieval_query": "ingresos segmento informática redes",
+  "retrieval_index": "data/processed/nvidia_2025.chunks.c1200.o200.jsonl",
+  "expected_status": "answered",
+  "expected_calculation": {
+    "segment_revenue": 116.193,
+    "consolidated_revenue": 130.497,
+    "unit": "billion_USD"
+  }
+},
+{
+  "id": "rag_spain_revenue_missing_vector",
+  "expect_no_calculation": true,
+  "forbidden_phrases": [
+    "sus datos se encuentran agregados",
+    "quedan englobados dentro de la categoría"
+  ],
+  "question": "¿Qué porcentaje de los ingresos de Compute & Networking de 2025 corresponde a clientes de España? Usa únicamente las evidencias recuperadas. Si falta ese desglose, indícalo sin estimar un porcentaje ni sustituirlo por otros datos geográficos.",
+  "input_files": [],
+  "retriever": "vector",
+  "retrieval_query": "¿Qué porcentaje de los ingresos de Compute & Networking de 2025 corresponde a clientes de España?",
+  "retrieval_index": "data/processed/nvidia_2025.chunks.c1200.o200.jsonl",
+  "expected_status": "insufficient_evidence"
+},
+{
+  "id": "rag_future_revenue_missing_vector",
+  "question": "¿Cuáles fueron los ingresos reales auditados de NVIDIA en el ejercicio fiscal 2035? Usa únicamente las evidencias recuperadas. No sustituyas el ejercicio solicitado por otro ni presentes previsiones como resultados reales.",
+  "input_files": [],
+  "retriever": "vector",
+  "retrieval_query": "What was NVIDIA's actual audited revenue for fiscal 2035?",
+  "retrieval_index": "data/processed/nvidia_2025.chunks.c1200.o200.jsonl",
+  "expected_status": "insufficient_evidence"
+},
+{
+  "id": "visual_racks_text_only",
+  "question": "En la página PDF 5 de NVIDIA-2025-Annual-Report.pdf, en la fila superior de racks, ¿qué marca aparece inmediatamente a la izquierda de AWS y cuál inmediatamente a su derecha? Usa exclusivamente la evidencia proporcionada. Si no puedes verificar las posiciones visuales, indícalo sin adivinar. Cita documento y página cuando puedas responder.",
+  "input_files": [],
+  "retrieval_query": "The AI Superchip Powering the Next Industrial Revolution",
+  "retrieval_index": "data/processed/nvidia_2025.pages.jsonl",
+  "expected_status": "insufficient_evidence",
+  "expect_no_calculation": true
+},
+{
+  "id": "visual_racks_image",
+  "question": "En la página PDF 5 de NVIDIA-2025-Annual-Report.pdf, en la fila superior de racks, ¿qué marca aparece inmediatamente a la izquierda de AWS y cuál inmediatamente a su derecha? Usa exclusivamente la evidencia proporcionada. Si no puedes verificar las posiciones visuales, indícalo sin adivinar. Cita documento y página cuando puedas responder.",
+  "input_files": ["data/processed/page_images/NVIDIA-2025-Annual-Report.p5.144dpi.png"],
+  "retrieval_query": "The AI Superchip Powering the Next Industrial Revolution",
+  "retrieval_index": "data/processed/nvidia_2025.pages.jsonl",
+  "expected_status": "answered",
+  "expect_no_calculation": true,
+  "must_include": [
+    "Microsoft Azure inmediatamente a la izquierda de AWS y Meta inmediatamente a la derecha.",
+    "Referencia a NVIDIA-2025-Annual-Report.pdf, página PDF 5."
+  ],
+  "must_not_include": [
+    "Intercambiar izquierda y derecha.",
+    "Afirmar relaciones comerciales o especificaciones técnicas basándose únicamente en los logos."
+  ]
+}
+,
+{
+  "id": "agent_fy2024_from_report2025",
+  "forbid_note_numbers": true,
+  "forbidden_phrases": ["resultado exacto"],
+  "execution_mode": "agent_tools",
+  "source_file": "NVIDIA-2025-Annual-Report.pdf",
+  "question": "Usa search_corporate_reports y exclusivamente NVIDIA-2025-Annual-Report.pdf: ¿qué porcentaje de los ingresos consolidados del ejercicio fiscal 2024 correspondía a Compute & Networking? Consulta las tablas con cifras en millones, conserva su precisión y expresa los campos estructurados en miles de millones de USD. Muestra valores, cálculo, limitaciones de redondeo y cita documento y página PDF. No sustituyas FY2024 por FY2025.",
+  "input_files": [],
+  "expected_status": "answered",
+  "expected_calculation": {
+    "segment_revenue": 47.405,
+    "consolidated_revenue": 60.922,
+    "unit": "billion_USD"
+  },
+  "manual_review": ["La prosa debe describir FY2024 y corresponder al cálculo y a las citas."]
+},
+{
+  "id": "agent_spain_missing_multireport",
+  "forbid_note_numbers": true,
+  "execution_mode": "agent_tools",
+  "source_file": "NVIDIA-2025-Annual-Report.pdf",
+  "question": "Usa search_corporate_reports y exclusivamente NVIDIA-2025-Annual-Report.pdf: ¿qué porcentaje de los ingresos de Compute & Networking del ejercicio fiscal 2025 corresponde a clientes de España? Si las evidencias recuperadas no permiten determinarlo, explica qué falta sin inventar un importe ni atribuir España a Other.",
+  "input_files": [],
+  "expected_status": "insufficient_evidence",
+  "expect_no_calculation": true,
+  "forbidden_phrases": [
+    "sus datos se encuentran agregados",
+    "quedan englobados dentro de la categoría",
+    "faltan los siguientes datos en el informe",
+    "el informe no menciona",
+    "el informe nvidia-2025-annual-report.pdf no presenta"
+  ]
+},
+{
+  "id": "agent_future_missing_multireport",
+  "forbid_note_numbers": true,
+  "execution_mode": "agent_tools",
+  "source_file": "2026-Annual-Report-Web.pdf",
+  "question": "Usa search_corporate_reports y exclusivamente 2026-Annual-Report-Web.pdf: ¿cuáles fueron los ingresos reales auditados de NVIDIA del ejercicio fiscal 2035? Si no hay evidencia suficiente, indica la limitación sin sustituir el ejercicio por otro ni usar previsiones como resultados reales.",
+  "input_files": [],
+  "expected_status": "insufficient_evidence",
+  "expect_no_calculation": true
 }
 ]

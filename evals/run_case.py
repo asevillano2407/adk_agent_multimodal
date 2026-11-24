@@ -8,6 +8,8 @@ import argparse
 
 from google.adk.runners import InMemoryRunner
 from google.genai import types
+from google import genai
+import chromadb
 
 from datetime import datetime, timezone
 
@@ -16,9 +18,35 @@ from time import perf_counter
 
 from retrieval.search_pages import search_pages
 from retrieval.format_context import format_context
+from retrieval.search_vectors import search_chunks
+from evals.response_rules import validate_response_rules
+from evals.agent_execution import check_agent_index, collect_tool_events, validate_agent_execution
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def retrieve_evidence(case: dict) -> list[dict]:
+    """Recupera evidencia con el backend del caso y cierra el cliente propio."""
+    backend = case.get("retriever", "lexical")
+    if backend == "lexical":
+        return search_pages(
+            case["retrieval_query"],
+            PROJECT_ROOT / case.get(
+                "retrieval_index", "data/processed/nvidia_2025.pages.jsonl"
+            ),
+            top_k=3,
+        )
+    if backend != "vector":
+        raise ValueError(f"Retriever desconocido: {backend}")
+    store = chromadb.PersistentClient(
+        path=str(PROJECT_ROOT / case.get("vector_store", "data/processed/chroma"))
+    )
+    collection = store.get_collection(
+        case.get("collection", "nvidia_fixed_gemini001_768"), embedding_function=None
+    )
+    with genai.Client(vertexai=False) as client:
+        return search_chunks(client, collection, case["retrieval_query"], top_k=3)
 
 
 def load_case(case_id: str) -> dict:
@@ -64,8 +92,21 @@ async def main(case_id: str) -> None:
     from evals.check_calculation import validate_calculation
 
     case = load_case(case_id)
+    execution_mode = case.get("execution_mode", "controlled")
+    if execution_mode not in ("controlled", "agent_tools"):
+        raise ValueError("Modo de evaluación desconocido.")
+    index_identity = None
+    if execution_mode == "agent_tools":
+        if "retrieval_query" in case or case["input_files"]:
+            raise ValueError("El caso con tools debe empezar sin evidencia inyectada.")
+        from corporate_reports.tools import COLLECTION_NAME
+
+        index_identity = check_agent_index(PROJECT_ROOT, COLLECTION_NAME)
     runner = InMemoryRunner(
-        agent=root_agent,
+        # Estos casos evalúan adjuntos/contexto controlados. La conversación
+        # interactiva sí dispone de tools; aquí evitamos búsquedas adicionales
+        # que invalidarían missing_document y alterarían la comparación RAG.
+        agent=root_agent if execution_mode == "agent_tools" else root_agent.model_copy(update={"tools": []}),
         app_name="corporate_reports",
     )
 
@@ -77,12 +118,12 @@ async def main(case_id: str) -> None:
         parts = [types.Part(text=case["question"])]
 
         retrieved_pages = []
+        retrieval_index = None
         if "retrieval_query" in case:
-            retrieved_pages = search_pages(
-                case["retrieval_query"],
-                PROJECT_ROOT / "data/processed/nvidia_2025.pages.jsonl",
-                top_k=3,
+            retrieval_index = case.get(
+                "retrieval_index", "data/processed/nvidia_2025.pages.jsonl"
             )
+            retrieved_pages = retrieve_evidence(case)
             parts.append(
                 types.Part(
                     text=(
@@ -113,12 +154,21 @@ async def main(case_id: str) -> None:
         message = types.Content(role="user", parts=parts)
 
         final_text = None
+        tool_trace = []
+        run_options = {}
+        if execution_mode == "agent_tools":
+            from google.adk.agents.run_config import RunConfig
+
+            run_options["run_config"] = RunConfig(max_llm_calls=8)
         generation_started = perf_counter()
         async for event in runner.run_async(
             user_id=session.user_id,
             session_id=session.id,
             new_message=message,
+            **run_options,
         ):
+            if execution_mode == "agent_tools":
+                tool_trace.extend(collect_tool_events(event))
             if event.is_final_response() and event.content:
                 final_text = "".join(
                     part.text
@@ -136,6 +186,9 @@ async def main(case_id: str) -> None:
                 f"Estado inesperado: {response.status}; "
                 f"esperado: {case['expected_status']}"
             )
+        validate_response_rules(response, case)
+        if execution_mode == "agent_tools":
+            validate_agent_execution(response, case, tool_trace)
         if "expected_calculation" in case:
             validate_calculation(
                 response,
@@ -161,11 +214,25 @@ async def main(case_id: str) -> None:
             "generation_seconds": round(generation_seconds, 3),
             "response_file": output_path.name,
             "automated_checks": "passed",
+            "execution_mode": execution_mode,
+            "agent_index": index_identity,
+            "tool_trace": tool_trace,
             "retrieval_query": case.get("retrieval_query"),
+            "retrieval_index": retrieval_index,
+            "retriever": case.get("retriever", "lexical") if "retrieval_query" in case else None,
+            "collection": case.get("collection", "nvidia_fixed_gemini001_768")
+            if case.get("retriever") == "vector" else None,
+            "retrieved_text_characters": sum(
+                len(page["text"]) for page in retrieved_pages
+            ),
             "retrieved_pages": [
                 {
-                    "source_file": page["source_file"],
-                    "pdf_page": page["pdf_page"],
+                    key: page[key]
+                    for key in (
+                        "source_file", "pdf_page", "chunk_id", "start_char", "end_char",
+                        "distance",
+                    )
+                    if key in page
                 }
                 for page in retrieved_pages
             ],

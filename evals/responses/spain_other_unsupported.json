@@ -1,0 +1,10 @@
+{
+  "status": "insufficient_evidence",
+  "answer": "No es posible determinar el porcentaje de los ingresos del segmento Compute & Networking del ejercicio fiscal 2025 que corresponde a clientes de España a partir de la información del informe anual. \n\nEn la Nota sobre información geográfica (NVIDIA-2025-Annual-Report.pdf, página 171), NVIDIA desglosa los ingresos totales según la ubicación de facturación del cliente para las siguientes regiones/países específicos:\n- Estados Unidos ($61.257 millones)\n- Singapur ($23.684 millones)\n- Taiwán ($20.573 millones)\n- China, incluido Hong Kong ($17.108 millones)\n- Otros países («Other») ($7.875 millones)\n\nEspaña no figura como una partida independiente en dicho desglose (sus datos se encuentran agregados en la categoría «Other»). Asimismo, el informe no proporciona una desglosación de los ingresos del segmento Compute & Networking por país individual.",
+  "sources": ["NVIDIA-2025-Annual-Report.pdf, página 171"],
+  "limitations": [
+    "El informe anual de NVIDIA FY2025 no desglosa los ingresos correspondientes a España de manera individualizada (quedan englobados dentro de la categoría «Other»).",
+    "El informe no ofrece un desglose de los ingresos por segmento operativo (Compute & Networking) distribuido por país específico."
+  ],
+  "revenue_share_calculation": null
+}

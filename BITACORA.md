@@ -2,10 +2,10 @@
 
 ## Punto actual
 
-- **Última actualización:** 2026-10-29 (Europe/Madrid).
-- **Fase activa:** 3 de 11 — RAG multimodal, preparación de la ingesta documental.
-- **Último hito:** fase 2 completada con tres ejecuciones reales revisadas, metadatos y cinco tests offline pasando.
-- **Próxima acción:** preparar extracción local por página conservando documento y número de página; comparar texto extraído con la página visual antes de diseñar la recuperación.
+- **Última actualización:** 2026-11-24 (Europe/Madrid).
+- **Fase activa:** 3 de 11 — base técnica local completada; cierre de aprendizaje pendiente.
+- **Último hito:** seis informes, 4143 chunks no vacíos en Chroma, herramientas textuales y visuales activas, y evaluación real de cálculo y abstención revisada.
+- **Próxima acción:** preguntas y ejercicio de cierre; confirmar disponibilidad para empezar la fase 4. La fase 4 no se ha iniciado.
 - **No avanzar de fase sin confirmación del usuario.**
 
 ## Objetivo y forma de aprender
@@ -20,7 +20,7 @@ El usuario implementa y ejecuta para aprender a reproducir el trabajo. El mentor
 | --- | --- | --- |
 | 1. Primer agente local | Completada | ADK y Gemini funcionando en CLI y web; consulta con imagen e inspección de eventos, latencia y tokens. |
 | 2. Respuestas estructuradas y evaluación | Completada (base inicial) | Contrato de salida validado, casos positivos y de abstención, ejecución repetible de casos contra el agente y resultados registrados. |
-| 3. RAG multimodal | En curso | Ingesta de PDFs con páginas y metadatos, tratamiento de texto/tablas/imágenes, recuperación de evidencias y citas; evaluar retrieval y generación por separado. |
+| 3. RAG multimodal | Base técnica completada; cierre de aprendizaje pendiente | Ingesta de PDFs con páginas y metadatos, recuperación textual y lectura visual, citas y evaluación separada de retrieval y generación. Quedan limitaciones de calidad documentadas. |
 | 4. Tools, estado y memoria | Pendiente | Herramientas propias de consulta y cálculo, validación de entradas y errores; distinguir historial, estado de sesión y memoria persistente. |
 | 5. Multi-agente y protocolos | Pendiente | Sub-agentes, flujos secuencial/paralelo/bucle con límites; servidor y cliente A2A, Agent Card y decisión A2A vs sub-agentes vs MCP. |
 | 6. GCP e identidad | Pendiente | Proyecto y control de costes, APIs, ADC, impersonación, service accounts, IAM de mínimo privilegio y Secret Manager, sin claves de service account persistentes. |
@@ -76,17 +76,58 @@ Seguridad, privacidad, tests y observabilidad se aplican durante todo el recorri
 
 **Límites del evaluador actual:** no lee la imagen ni demuestra fidelidad de toda la prosa. Compara campos numéricos con referencias revisadas por una persona. Un script sobre respuestas guardadas no equivale a ejecutar una evaluación nueva contra el modelo. La lista `must_include`/`must_not_include` todavía se revisa manualmente.
 
-## Fase 3 — Plan de trabajo
+## Fase 3 — Hitos realizados y cierre
 
-- [ ] Inspeccionar un PDF y extraer texto por página, conservando origen y numeración PDF desde 1.
-- [ ] Comparar extracción textual y representación visual de páginas seleccionadas; detectar tablas, imágenes y límites de orden de lectura.
-- [ ] Definir unidades de recuperación y metadatos; conservar relación entre fragmentos, páginas y elementos visuales.
-- [ ] Implementar una recuperación básica y evaluar si encuentra las evidencias necesarias antes de añadir complejidad.
-- [ ] Conectar recuperación y generación; citas trazables y abstención si falta evidencia.
-- [ ] Incorporar evidencia visual cuando el texto sea insuficiente y comparar calidad, latencia y consumo.
-- [ ] Evaluar recuperación y generación por separado; cierre de comprensión y confirmación para avanzar.
+- [x] Extraer texto por página conservando archivo y numeración PDF desde 1; ampliar a los seis informes.
+- [x] Comparar texto y representación visual: tablas financieras y posiciones de logos que el texto no permite justificar.
+- [x] Implementar chunks fijos de 1200 caracteres con overlap de 200, dentro de cada página, con offsets y procedencia. Alternativa `natural` implementada; la colección activa conserva `fixed` como baseline.
+- [x] Mantener un baseline léxico de términos distintos compartidos; evaluar búsqueda global y filtrada por documento.
+- [x] Generar embeddings con `gemini-embedding-001`, 768 dimensiones, tareas DOCUMENT/QUERY y normalización L2; guardar en Chroma con distancia coseno y recuperar top 3.
+- [x] Preparar 1057 páginas y 4146 chunks; omitir tres chunks vacíos de la indexación: 4143 registros finales.
+- [x] Reutilizar 732 embeddings de la colección anterior y generar 3411 nuevos, con lotes reanudables, hashes e identidad de corpus. La colección anterior se conserva para comparar.
+- [x] Renderizar las 1057 páginas como PNG a 144 DPI; manifiestos, hashes, límites de tamaño y validación antes de entregar imágenes al modelo.
+- [x] Activar `nvidia_reports_fixed_gemini001_768`; centralizar selección y alcance del prompt en `corporate_reports/config.py`.
+- [x] Registrar tres herramientas: búsqueda textual, catálogo de documentos y lectura visual de una página. Máximo dos búsquedas y dos lecturas visuales por turno, con presupuestos separados.
+- [x] Separar evaluación de retrieval, generación con contexto controlado y agente con tools; sesiones nuevas y trazas mínimas sin texto de documentos ni consultas de herramientas.
+- [x] Revisar ejecuciones reales de cálculo FY2024 desde el informe de 2025 y abstenciones sobre España/FY2035. Un PASS automático no equivale a fidelidad completa de la prosa.
+- [ ] Responder preguntas de comprensión y completar el mini-ejercicio indicados abajo.
+- [ ] Confirmar el inicio de la fase 4.
 
-No elegir una base vectorial o arquitectura multiagente antes de entender los documentos y comprobar qué necesita el caso de uso.
+### Archivos principales
+
+- `ingestion/`: extracción/exportación, chunking, renderización, preparación versionada e indexación reanudable.
+- `retrieval/`: baseline léxico, embeddings, consulta vectorial, preparación del contexto y validación de catálogos/corpus.
+- `corporate_reports/agent.py`, `config.py`, `tools.py`, `visual_tools.py`, `callbacks.py`: orquestación, alcance, herramientas y límites.
+- `evals/evaluate_retrieval.py`, `retrieval_multireport.json`: referencias conocidas y métricas Hit/MRR/evidencia. `evals/README.md` explica comandos y límites.
+- `evals/run_case.py`, `agent_execution.py`, `response_rules.py`, `cases.json`: ejecución, trazas y controles deterministas. `tests/`: pruebas offline con datos sintéticos y mocks de APIs.
+
+### Resultados de recuperación y cómo interpretarlos
+
+En el conjunto de ocho casos de desarrollo (siete positivos y uno negativo), el baseline léxico filtrado obtuvo Hit@3=0,7143, MRR@3=0,6190 y Hit de evidencia@3=0,5714. Los negativos se excluyen de estas medias: recuperar fragmentos no prueba que exista respuesta.
+
+La ejecución vectorial filtrada `retrieval_20261114T184537425173Z.json` publicó inicialmente Hit@3=1, MRR@3=0,8571 y evidencia=0,8571. La revisión mostró que la página 157 del informe de 2021 contenía una tabla válida ausente de las etiquetas. Tras añadirla, la relectura offline de **esos mismos resultados guardados** obtuvo Hit@3=1, MRR@3=0,9286 y evidencia=1. No fue una nueva búsqueda y no se reescribió el informe histórico.
+
+También se añadieron tablas resumen válidas con cifras redondeadas en 2023–2026. Estas revisiones son correcciones de etiquetas de desarrollo, no mejoras del recuperador. Las referencias siguen siendo parciales, el conjunto es pequeño y no constituye un benchmark independiente de producción. Presencia de anclas en un chunk no demuestra interpretación correcta de filas, columnas o unidades.
+
+### Límites y trabajo que permanece
+
+- No hay combinación híbrida léxico/vectorial, BM25, reranking ni umbral de relevancia. Se conserva el baseline para justificar cambios con evidencia.
+- La ruta visual lee páginas concretas; no hay un índice de embeddings de imágenes ni OCR en la ingesta actual. Renderizar previamente ahorra conversiones repetidas, pero no elimina el consumo del modelo al interpretar cada imagen.
+- Los porcentajes se calculan en el LLM y se verifican en los evaluadores. Una herramienta de cálculo determinista pertenece al siguiente bloque.
+- Persisten defectos ocasionales de prosa: afirmaciones sobre la ausencia de datos en todo un PDF, detalles innecesarios y formato numérico mixto. Las reglas de frases/notas son detectores acotados, no un juez semántico ni una garantía contra prompt injection.
+- Las citas son cadenas libres. Los controles verifican procedencia y casos conocidos; no validan semánticamente todas las páginas citadas.
+- Latencia y consumo aún necesitan medición sistemática. El último caso positivo tardó 100,88 s; es una observación, no una media ni un objetivo de servicio aceptado. No se ha establecido un benchmark de coste o tokens por modalidad.
+- El despliegue, IAM, persistencia gestionada, autenticación, CI/CD y operación siguen pendientes en sus fases. Esta es una base local de aprendizaje.
+
+### Cierre de aprendizaje pendiente
+
+1. ¿Por qué Hit@3 puede valer 1 mientras Hit de evidencia@3 vale 0?
+2. ¿Qué diferencia hay entre buscar dentro del informe de 2025 y seleccionar cifras del ejercicio FY2024?
+3. ¿Cuándo usarías `read_report_page` y qué limitación tiene localizar una imagen sin texto identificable?
+
+**Mini-ejercicio:** abrir la página PDF 133 del informe de 2025, localizar la columna FY2024 y contrastar 47405 y 60922 millones de USD con los campos 47.405 y 60.922 `billion_USD` de la última respuesta. Comprobar en su metadata el filtro `source_file` y las páginas devueltas por la herramienta. No requiere nuevas llamadas al modelo.
+
+**Checklist de cierre técnico:** los seis documentos están preparados; la colección completa coincide con su corpus; retrieval y generación se evalúan por separado; el agente usa el documento solicitado; cálculo y abstención pasan los controles aplicables; los límites conocidos están descritos. La comprensión y la transición a fase 4 continúan pendientes de respuesta del usuario.
 
 ## Decisiones e incidencias
 
@@ -149,6 +190,21 @@ python -m evals.check_calculation
 - Limitaciones que permanecen: tres casos no constituyen un benchmark amplio; faltan evaluación semántica automática, hashes/versionado completo de prompts/inputs y captura completa de salidas inválidas. El registro actual no garantiza capturar fallos anteriores al `try` o los del propio guardado/cierre.
 - El usuario delega creación y ejecución de tests al mentor; la implementación principal sigue siendo guiada.
 - El usuario confirma continuar a fase 3. Los PDFs todavía no son consultados automáticamente por el agente.
+
+### 2026-11-24 — Cierre técnico de fase 3; transición pendiente
+
+- Registro retrospectivo de hitos de la fase, respetando la actualización de la bitácora solo al cierre y sin inventar fechas de implementación intermedias.
+- Corpus activo: `nvidia_reports_fixed_gemini001_768`, 4143 registros, hash `814b5da3f57a6ae12c5990fdb52a333d9032eb3833b1b2c1484948a0ee405ab4`. El usuario ejecutó las ingestas y llamadas reales; el mentor implementó lo delegado y ejecutó tests offline.
+- Dependencias incorporadas: pypdf, fonttools, pypdfium2, Pillow y Chroma; se resolvieron incompatibilidades de OpenTelemetry y el usuario confirmó `pip check` limpio.
+- Incidencias: cuota diaria de embeddings 429 (límite 1000 según respuestas recibidas) y 503 de alta demanda durante generación. Reanudar no exige regenerar vectores ya guardados. Esperar entre solicitudes no evita agotar la cuota diaria.
+- Corregido un fallo de rutas largas en Windows: el prefijo del temporal incluía el nombre completo del manifiesto; se sustituyó por un prefijo corto conservando la escritura atómica.
+- Corregido el filtro de 2023 por diferencia entre `ir` e `IR`. Los filtros de metadatos exigen nombres exactos.
+- `agent_fy2024_from_report2025_20261124T002041117809Z`: una búsqueda filtrada a 2025, cifras FY2024 de 47.405/60.922 `billion_USD`, 77,81 %, fuentes PDF 170 y 133; controles pasando y revisión principal satisfactoria. Permanecen mejoras de formato numérico y de la expresión «cálculo exacto» sobre datos redondeados.
+- `agent_spain_missing_multireport_20261124T001115751793Z`: dos búsquedas, abstención y cálculo null; sin nota inventada ni atribución de España a Other. Continúa una afirmación global sobre el documento en limitations; no se considera prosa plenamente validada.
+- `agent_future_missing_multireport_20261124T001323356565Z`: catálogo y una búsqueda en el informe de 2026; abstención FY2035, cálculo null, referencias recuperadas 125 y 139. Las limitaciones acotan la búsqueda; la primera afirmación todavía puede formularse con mayor cautela.
+- Respuestas anteriores revelaron notas inventadas y expresiones de precisión excesiva. Se ajustaron instrucciones y reglas de regresión, sin modificar artefactos históricos. El PASS de una ejecución corresponde a las reglas vigentes en ese momento.
+- Antes de preparar los commits de cierre se ejecutó la suite completa del estado final: **236 tests offline pasando**. No se realizaron llamadas a Gemini ni se modificó el índice real durante esas pruebas. También se revisaron patrones de credenciales en los archivos candidatos a Git y `git diff --check` no detectó errores de espacios.
+- Se registran preguntas, mini-ejercicio y límites. No se ha autorizado ni iniciado la fase 4.
 
 ## Cómo mantener esta bitácora
 
